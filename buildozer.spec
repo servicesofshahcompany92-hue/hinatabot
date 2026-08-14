@@ -5,7 +5,7 @@ package.domain = org.hinatabot
 source.dir = .
 source.include_exts = py,png,jpg,kv,atlas
 version = 1.0.0
-requirements = python3,kivy,kivymd,pillow
+requirements = python3,kivy==2.2.1,kivymd==1.1.1,pillow
 orientation = portrait
 fullscreen = 0
 android.archs = arm64-v8a
