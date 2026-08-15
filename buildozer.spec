@@ -1,17 +1,33 @@
 [app]
+
+# App Info
 title = Hinata Bot
 package.name = hinatabot
-package.domain = org.test
+package.domain = org.hinatabot
+
+version = 1.0.0
+
+# Source Files
 source.dir = .
-source.include_exts = py,png,jpg,kv,atlas
-version = 0.1
-requirements = python3,kivy,kivymd
+source.include_exts = py,png,jpg,jpeg,kv,atlas,json,txt
+source.exclude_dirs = tests,bin,venv,.venv,.buildozer,.git,.github
+
+# Requirements
+requirements = python3,kivy==2.2.1,kivymd==1.1.1,requests,urllib3,certifi,chardet,idna,pillow
+
+# Display Configuration
 orientation = portrait
 fullscreen = 0
+
+# Android Specs
+android.permissions = INTERNET,ACCESS_NETWORK_STATE
 android.api = 33
 android.minapi = 21
-android.archs = arm64-v8a
+android.ndk = 25b
+android.ndk_api = 21
 android.accept_sdk_license = True
+android.enable_androidx = True
+android.archs = arm64-v8a
 
 [buildozer]
 log_level = 2
