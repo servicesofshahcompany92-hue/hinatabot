@@ -38,12 +38,12 @@ jobs:
         python -m pip install --upgrade pip
         pip install "Cython==0.29.33" buildozer
 
-    - name: Auto-Accept SDK Licenses & Build APK
+    - name: Build APK with Buildozer
       run: |
         yes | buildozer -v android debug
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: MikeyBot-APK
+        name: HinataBot-APK
         path: bin/*.apk
