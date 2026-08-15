@@ -9,7 +9,6 @@ from kivy.uix.label import Label
 from kivy.uix.button import Button
 from kivy.uix.textinput import TextInput
 from kivy.uix.spinner import Spinner
-from kivy.uix.widget import Widget
 from kivy.core.window import Window
 from kivy.graphics import Color, Rectangle, RoundedRectangle, Line
 
@@ -20,49 +19,7 @@ CARD_BORDER = (0.15, 0.22, 0.30, 1)
 NEON_GREEN = (0.0, 0.9, 0.45, 1)
 NEON_RED = (1.0, 0.25, 0.25, 1)
 TEXT_MAIN = (0.95, 0.96, 0.98, 1)
-TEXT_SUB = (0.65, 0.72, 0.82, 1)
-
-class LiveMarketChart(Widget):
-    """Clean Candlestick Chart with fixed bounds."""
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.bind(pos=self.draw_chart, size=self.draw_chart)
-
-    def draw_chart(self, *args):
-        self.canvas.clear()
-        if self.width <= 0 or self.height <= 0:
-            return
-
-        with self.canvas:
-            # Chart Background
-            Color(0.04, 0.06, 0.09, 1)
-            Rectangle(pos=self.pos, size=self.size)
-
-            # Gridlines
-            Color(0.12, 0.16, 0.22, 0.8)
-            for i in range(1, 3):
-                y = self.y + (self.height / 3) * i
-                Line(points=[self.x, y, self.x + self.width, y], width=1)
-
-            # Candlesticks Render
-            num_candles = 10
-            candle_w = self.width / (num_candles + 2)
-            random.seed(int(self.x + self.width))
-
-            for i in range(num_candles):
-                cx = self.x + (i + 1) * candle_w
-                ch = random.randint(int(self.height * 0.25), int(self.height * 0.65))
-                cy = self.y + random.randint(8, max(9, int(self.height - ch - 8)))
-                is_green = (i % 2 == 0)
-
-                if is_green:
-                    Color(*NEON_GREEN)
-                else:
-                    Color(*NEON_RED)
-
-                # Wick & Body
-                Line(points=[cx + candle_w / 2, cy - 4, cx + candle_w / 2, cy + ch + 4], width=1.2)
-                Rectangle(pos=(cx, cy), size=(max(3, candle_w * 0.6), ch))
+TEXT_SUB = (0.60, 0.68, 0.78, 1)
 
 class LoginScreen(Screen):
     def __init__(self, **kwargs):
@@ -72,11 +29,14 @@ class LoginScreen(Screen):
             self.rect = Rectangle(size=Window.size, pos=self.pos)
         self.bind(size=self._update_rect, pos=self._update_rect)
 
+        # Centered spacious card layout
         layout = BoxLayout(
-            orientation='vertical', padding=25, spacing=18,
-            size_hint=(0.92, None), pos_hint={'center_x': 0.5, 'center_y': 0.5}
+            orientation='vertical',
+            padding=25,
+            spacing=15,
+            size_hint=(0.9, 0.6),
+            pos_hint={'center_x': 0.5, 'center_y': 0.5}
         )
-        layout.bind(minimum_height=layout.setter('height'))
 
         with layout.canvas.before:
             Color(*CARD_COLOR)
@@ -85,33 +45,38 @@ class LoginScreen(Screen):
             self.card_line = Line(rounded_rectangle=[layout.x, layout.y, layout.width, layout.height, 16], width=1.2)
         layout.bind(size=self._update_layout_card, pos=self._update_layout_card)
 
-        # Header
+        # App Header
         layout.add_widget(Label(
-            text="[b]HINATA BOT PRO[/b]\n[size=14][color=00e673]QUANT AI TERMINAL v3.0[/color][/size]",
-            markup=True, font_size='24sp', halign='center', color=TEXT_MAIN,
-            size_hint_y=None, height=60
+            text="[b]HINATA BOT PRO[/b]",
+            markup=True, font_size='22sp', color=TEXT_MAIN,
+            size_hint_y=0.25
+        ))
+        layout.add_widget(Label(
+            text="[color=00e673]AI QUANT TRADING TERMINAL[/color]",
+            markup=True, font_size='13sp', color=NEON_GREEN,
+            size_hint_y=0.15
         ))
 
         # Username Field
-        u_box = BoxLayout(orientation='vertical', spacing=6, size_hint_y=None, height=75)
-        u_box.add_widget(Label(text="TRADER ID", color=TEXT_SUB, font_size='13sp', halign='left', size_hint_y=None, height=20, bold=True))
+        u_box = BoxLayout(orientation='vertical', spacing=4, size_hint_y=0.25)
+        u_box.add_widget(Label(text="TRADER ID", color=TEXT_SUB, font_size='12sp', halign='left', size_hint_y=0.3, bold=True))
         self.u_in = TextInput(
             text="Hinata_Pro_VIP", readonly=True, multiline=False,
-            size_hint_y=None, height=48,
+            size_hint_y=0.7,
             background_color=(0.06, 0.08, 0.12, 1), foreground_color=NEON_GREEN,
-            padding=[12, 12], font_size='16sp'
+            padding=[12, 10], font_size='14sp'
         )
         u_box.add_widget(self.u_in)
         layout.add_widget(u_box)
 
         # Password Field
-        p_box = BoxLayout(orientation='vertical', spacing=6, size_hint_y=None, height=75)
-        p_box.add_widget(Label(text="ACCESS KEY", color=TEXT_SUB, font_size='13sp', halign='left', size_hint_y=None, height=20, bold=True))
+        p_box = BoxLayout(orientation='vertical', spacing=4, size_hint_y=0.25)
+        p_box.add_widget(Label(text="ACCESS KEY", color=TEXT_SUB, font_size='12sp', halign='left', size_hint_y=0.3, bold=True))
         self.p_in = TextInput(
             password=True, hint_text="Enter Access Key", multiline=False,
-            size_hint_y=None, height=48,
+            size_hint_y=0.7,
             background_color=(0.06, 0.08, 0.12, 1), foreground_color=TEXT_MAIN,
-            padding=[12, 12], font_size='16sp'
+            padding=[12, 10], font_size='14sp'
         )
         p_box.add_widget(self.p_in)
         layout.add_widget(p_box)
@@ -119,8 +84,8 @@ class LoginScreen(Screen):
         # Login Button
         self.btn = Button(
             text="AUTHENTICATE & ENTER", bold=True,
-            size_hint_y=None, height=52,
-            background_color=(0,0,0,0), color=(1,1,1,1), font_size='16sp'
+            size_hint_y=0.22,
+            background_color=(0,0,0,0), color=(1,1,1,1), font_size='15sp'
         )
         with self.btn.canvas.before:
             Color(*NEON_GREEN)
@@ -128,7 +93,7 @@ class LoginScreen(Screen):
         self.btn.bind(size=self._update_btn, pos=self._update_btn, on_release=self.auth)
         layout.add_widget(self.btn)
 
-        self.err = Label(text="", color=NEON_RED, font_size='13sp', size_hint_y=None, height=20)
+        self.err = Label(text="", color=NEON_RED, font_size='12sp', size_hint_y=0.1)
         layout.add_widget(self.err)
 
         self.add_widget(layout)
@@ -160,21 +125,21 @@ class DashboardScreen(Screen):
             self.rect = Rectangle(size=Window.size, pos=self.pos)
         self.bind(size=self._update_rect, pos=self._update_rect)
 
-        root = BoxLayout(orientation='vertical', padding=12, spacing=10)
+        root = BoxLayout(orientation='vertical', padding=15, spacing=12)
 
-        # Title
-        top = BoxLayout(orientation='horizontal', size_hint_y=None, height=32)
+        # Top Header Bar
+        top = BoxLayout(orientation='horizontal', size_hint_y=0.07)
         top.add_widget(Label(
-            text="[b]HINATA BOT[/b]  |  [color=00e673]LIVE TERMINAL[/color]",
-            markup=True, font_size='18sp', color=TEXT_MAIN, halign='left'
+            text="[b]HINATA BOT PRO[/b]  |  [color=00e673]LIVE TERMINAL[/color]",
+            markup=True, font_size='16sp', color=TEXT_MAIN, halign='left'
         ))
         root.add_widget(top)
 
-        # Accuracy & Stats Board
-        stats_board = GridLayout(cols=3, size_hint_y=None, height=48, spacing=6)
+        # Statistics & Accuracy Board (Mikey Style)
+        stats_board = GridLayout(cols=3, size_hint_y=0.1, spacing=8)
         with stats_board.canvas.before:
             Color(*CARD_COLOR)
-            self.sb_bg = RoundedRectangle(size=stats_board.size, pos=stats_board.pos, radius=[8])
+            self.sb_bg = RoundedRectangle(size=stats_board.size, pos=stats_board.pos, radius=[10])
         stats_board.bind(size=self._update_sb_bg, pos=self._update_sb_bg)
 
         stats_board.add_widget(Label(text="[color=9eabbd]ACCURACY[/color]\n[b][color=00e673]98.8%[/color][/b]", markup=True, font_size='12sp', halign='center'))
@@ -182,8 +147,8 @@ class DashboardScreen(Screen):
         stats_board.add_widget(Label(text="[color=9eabbd]ENGINE[/color]\n[b]QUANT AI[/b]", markup=True, font_size='12sp', halign='center'))
         root.add_widget(stats_board)
 
-        # Pair & Timeframe Spinners
-        ctrl_box = GridLayout(cols=2, size_hint_y=None, height=46, spacing=8)
+        # Pair & Timeframe Selection Box
+        ctrl_box = GridLayout(cols=2, size_hint_y=0.09, spacing=10)
         self.pair_sp = Spinner(
             text='EUR/USD (OTC)',
             values=(
@@ -191,64 +156,65 @@ class DashboardScreen(Screen):
                 'EUR/GBP (OTC)', 'USD/CHF (OTC)', 'NZD/USD (OTC)', 'GBP/JPY',
                 'BTC/USD', 'ETH/USD', 'GOLD (OTC)', 'SILVER (OTC)'
             ),
-            background_color=(0.06, 0.08, 0.12, 1), color=TEXT_MAIN, font_size='14sp', bold=True
+            background_color=(0.06, 0.08, 0.12, 1), color=TEXT_MAIN, font_size='13sp', bold=True
         )
 
         self.tf_sp = Spinner(
             text='1 MIN',
             values=('5 SEC', '10 SEC', '15 SEC', '30 SEC', '1 MIN', '5 MIN', '15 MIN', '1 HOUR', '2 HOURS'),
-            background_color=(0.06, 0.08, 0.12, 1), color=NEON_GREEN, font_size='14sp', bold=True
+            background_color=(0.06, 0.08, 0.12, 1), color=NEON_GREEN, font_size='13sp', bold=True
         )
 
         ctrl_box.add_widget(self.pair_sp)
         ctrl_box.add_widget(self.tf_sp)
         root.add_widget(ctrl_box)
 
-        # Live Chart
-        self.chart = LiveMarketChart(size_hint_y=0.22)
-        root.add_widget(self.chart)
-
-        # Main Signal Display Box
-        self.card = BoxLayout(orientation='vertical', padding=14, spacing=8, size_hint_y=0.48)
+        # Main Professional Analysis Dashboard Card
+        self.card = BoxLayout(orientation='vertical', padding=20, spacing=12, size_hint_y=0.63)
         with self.card.canvas.before:
             Color(*CARD_COLOR)
-            self.c_bg = RoundedRectangle(size=self.card.size, pos=self.card.pos, radius=[12])
+            self.c_bg = RoundedRectangle(size=self.card.size, pos=self.card.pos, radius=[16])
             Color(*CARD_BORDER)
-            self.c_line = Line(rounded_rectangle=[self.card.x, self.card.y, self.card.width, self.card.height, 12], width=1.1)
+            self.c_line = Line(rounded_rectangle=[self.card.x, self.card.y, self.card.width, self.card.height, 16], width=1.2)
         self.card.bind(size=self._update_c_bg, pos=self._update_c_bg)
 
-        self.sig_title = Label(text="READY TO ANALYZE", font_size='22sp', bold=True, color=TEXT_SUB, size_hint_y=None, height=35)
-        self.close_pred = Label(text="Candle Closing: Pending Signal", font_size='15sp', color=TEXT_SUB, size_hint_y=None, height=25)
+        self.sig_title = Label(text="READY TO ANALYZE", font_size='22sp', bold=True, color=TEXT_SUB, size_hint_y=0.18)
+        self.close_pred = Label(text="Candle Closing: Pending Signal", font_size='14sp', color=TEXT_SUB, size_hint_y=0.12)
 
-        info_box = BoxLayout(orientation='vertical', spacing=8, padding=[4, 4])
-        self.lbl_pair = Label(text="[color=9eabbd]Selected Pair:[/color] --", markup=True, font_size='15sp', color=TEXT_MAIN, halign='left')
-        self.lbl_time = Label(text="[color=9eabbd]Entry Time (PKT):[/color] --:--:--", markup=True, font_size='15sp', color=TEXT_MAIN, halign='left')
-        self.lbl_acc = Label(text="[color=9eabbd]Signal Precision:[/color] --%", markup=True, font_size='15sp', color=TEXT_MAIN, halign='left')
+        # Clean Information Rows
+        info_grid = GridLayout(cols=1, spacing=10, size_hint_y=0.5)
+        self.lbl_pair = Label(text="[color=9eabbd]Asset Pair:[/color] --", markup=True, font_size='14sp', color=TEXT_MAIN, halign='left')
+        self.lbl_time = Label(text="[color=9eabbd]Entry Time (PKT):[/color] --:--:--", markup=True, font_size='14sp', color=TEXT_MAIN, halign='left')
+        self.lbl_acc = Label(text="[color=9eabbd]Signal Precision:[/color] --%", markup=True, font_size='14sp', color=TEXT_MAIN, halign='left')
 
         self.lbl_pair.bind(size=self.lbl_pair.setter('text_size'))
         self.lbl_time.bind(size=self.lbl_time.setter('text_size'))
         self.lbl_acc.bind(size=self.lbl_acc.setter('text_size'))
 
-        info_box.add_widget(self.lbl_pair)
-        info_box.add_widget(self.lbl_time)
-        info_box.add_widget(self.lbl_acc)
+        info_grid.add_widget(self.lbl_pair)
+        info_grid.add_widget(self.lbl_time)
+        info_grid.add_widget(self.lbl_acc)
 
         self.lbl_conf = Label(
-            text="[color=9eabbd]Confluence:[/color]\nSelect Pair & Timeframe, then tap Analyze",
-            markup=True, font_size='13sp', color=TEXT_SUB, halign='center', size_hint_y=None, height=45
+            text="[color=9eabbd]Technical Confluence:[/color]\nSelect Pair & Timeframe, then tap Analyze Market",
+            markup=True, font_size='12sp', color=TEXT_SUB, halign='center', size_hint_y=0.2
         )
 
         self.card.add_widget(self.sig_title)
         self.card.add_widget(self.close_pred)
-        self.card.add_widget(info_box)
+        self.card.add_widget(info_grid)
         self.card.add_widget(self.lbl_conf)
         root.add_widget(self.card)
 
-        # Action Button
-        self.an_btn = Button(text="ANALYZE LIVE MARKET", bold=True, size_hint_y=None, height=54, background_color=(0,0,0,0), color=(1,1,1,1), font_size='16sp')
+        # Analyze Action Button
+        self.an_btn = Button(
+            text="ANALYZE LIVE MARKET", bold=True,
+            size_hint_y=0.11,
+            background_color=(0,0,0,0), color=(1,1,1,1), font_size='16sp'
+        )
         with self.an_btn.canvas.before:
             Color(*NEON_GREEN)
-            self.an_bg = RoundedRectangle(size=self.an_btn.size, pos=self.an_btn.pos, radius=[10])
+            self.an_bg = RoundedRectangle(size=self.an_btn.size, pos=self.an_btn.pos, radius=[12])
         self.an_btn.bind(size=self._update_an_bg, pos=self._update_an_bg, on_release=self.run_analysis)
         root.add_widget(self.an_btn)
 
@@ -265,7 +231,7 @@ class DashboardScreen(Screen):
     def _update_c_bg(self, instance, value):
         self.c_bg.size = instance.size
         self.c_bg.pos = instance.pos
-        self.c_line.rounded_rectangle = [instance.x, instance.y, instance.width, instance.height, 12]
+        self.c_line.rounded_rectangle = [instance.x, instance.y, instance.width, instance.height, 16]
 
     def _update_an_bg(self, instance, value):
         self.an_bg.size = instance.size
@@ -276,22 +242,20 @@ class DashboardScreen(Screen):
         tf = self.tf_sp.text
         now = datetime.now().strftime("%H:%M:%S")
 
-        self.chart.draw_chart()
-
         rsi = random.uniform(18, 82)
         stoch = random.uniform(10, 90)
         signal_type = random.choice(["CALL", "PUT"])
 
         if signal_type == "CALL":
-            sig = f"SIGNAL: CALL (UP)"
+            sig = f"SIGNAL: CALL (BUY / UP)"
             color = NEON_GREEN
-            pred = f"Candle Close Prediction: UP (GREEN CANDLE)"
+            pred = f"Candle Close Prediction: HIGH (GREEN CANDLE)"
             acc = random.uniform(97.8, 99.8)
             conf = f"Order Block Rejection | RSI ({rsi:.1f}) Bullish | Stoch ({stoch:.1f}) Oversold"
         else:
-            sig = f"SIGNAL: PUT (DOWN)"
+            sig = f"SIGNAL: PUT (SELL / DOWN)"
             color = NEON_RED
-            pred = f"Candle Close Prediction: DOWN (RED CANDLE)"
+            pred = f"Candle Close Prediction: LOW (RED CANDLE)"
             acc = random.uniform(98.1, 99.9)
             conf = f"Supply Zone Breakdown | RSI ({rsi:.1f}) Bearish | Stoch ({stoch:.1f}) Overbought"
 
