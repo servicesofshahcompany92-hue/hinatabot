@@ -1,8 +1,7 @@
-# 1. License auto-accept enable karein
-android.accept_sdk_license = True
+[app]
 
-# 2. Stable Kivy & KivyMD versions set karein
-requirements = python3,kivy==2.2.1,kivymd==1.1.1
+# (str) Title of your application
+title = Hinata Bot
 
-# 3. Root warning disable karein
-warn_on_root = 0
+# (str) Package name
+package.name = hinatabot
