@@ -35,7 +35,13 @@ jobs:
         python -m pip install --upgrade pip setuptools
         pip install "Cython==0.29.33" "buildozer==1.5.0"
 
-    - name: Build APK with Buildozer
+    - name: Pre-Accept Android SDK Licenses
+      run: |
+        mkdir -p ~/.android/licenses
+        echo -e "893301122459683e100f4857330a08e033f42460\nd93507010450a90e5b4999398458347f3053d26c\n24333f8a63b68250914e637f75e22db3fc023696" > ~/.android/licenses/android-sdk-license
+        echo -e "84831b9409646a918e30573bab4c9c91346d8abd" > ~/.android/licenses/android-sdk-preview-license
+
+    - name: Build APK
       run: |
         buildozer -v android debug
 
