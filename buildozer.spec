@@ -12,8 +12,8 @@ source.dir = .
 source.include_exts = py,png,jpg,jpeg,kv,atlas,json,txt
 source.exclude_dirs = tests,bin,venv,.venv,.buildozer,.git,.github
 
-# Requirements
-requirements = python3,kivy==2.2.1,kivymd==1.1.1,requests,urllib3,certifi,chardet,idna,pillow
+# Requirements (kivy==2.2.1 se '==2.2.1' hata diya hai taakay python-for-android wheel fail na ho)
+requirements = python3,kivy,kivymd==1.1.1,requests,urllib3,certifi,chardet,idna,pillow
 
 # Display Configuration
 orientation = portrait
