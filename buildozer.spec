@@ -1,20 +1,8 @@
-[app]
-title = HinataBot
-package.name = hinatabot
-package.domain = org.hinatabot
-source.dir = .
-source.include_exts = py,png,jpg,kv,atlas
-version = 1.0.0
-requirements = python3,kivy==2.2.1,kivymd==1.1.1,pillow
-orientation = portrait
-fullscreen = 0
-android.archs = arm64-v8a
-android.api = 33
-android.minapi = 21
-android.build_tools_version = 33.0.2
-android.ndk_version = 25b
+# 1. License auto-accept enable karein
 android.accept_sdk_license = True
 
-[buildozer]
-log_level = 2
-warn_on_root = 1
+# 2. Stable Kivy & KivyMD versions set karein
+requirements = python3,kivy==2.2.1,kivymd==1.1.1
+
+# 3. Root warning disable karein
+warn_on_root = 0
