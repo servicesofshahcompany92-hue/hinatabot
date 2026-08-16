@@ -1,8 +1,6 @@
 import os
 import random
 from datetime import datetime
-
-import kivy
 from kivy.app import App
 from kivy.clock import Clock
 from kivy.uix.screenmanager import ScreenManager, Screen
@@ -17,12 +15,13 @@ from kivy.uix.scrollview import ScrollView
 from kivy.core.window import Window
 from kivy.graphics import Color, Rectangle, RoundedRectangle, Line
 
+# Safely import vibration for Android APK
 try:
     from plyer import vibrator
-except Exception:
+except ImportError:
     vibrator = None
 
-# Theme Palette
+# Neon Dark Theme Palette
 BG_COLOR = (0.05, 0.07, 0.10, 1)
 CARD_COLOR = (0.09, 0.12, 0.17, 1)
 CARD_BORDER = (0.15, 0.22, 0.30, 1)
@@ -31,7 +30,7 @@ NEON_RED = (1.0, 0.25, 0.25, 1)
 TEXT_MAIN = (0.95, 0.96, 0.98, 1)
 TEXT_SUB = (0.60, 0.68, 0.78, 1)
 
-# Quotex OTC Pairs
+# Exact Quotex OTC Trade Pairs (33+ Pairs)
 QUOTEX_EXACT_PAIRS = [
     "USD/BRL (OTC)", "AUD/USD (OTC)", "CAD/JPY (OTC)", "EUR/NZD (OTC)",
     "CAD/CHF (OTC)", "NZD/CHF (OTC)", "USD/COP (OTC)", "USD/IDR (OTC)",
@@ -46,18 +45,23 @@ QUOTEX_EXACT_PAIRS = [
     "GBP/USD (OTC)"
 ]
 
+# Advanced Institutional SMC Confluence Logic Engine
 SMC_BULLISH_CONFLUENCES = [
     "Institutional Buy-Side Liquidity Sweep at Equal Lows + Demand OB Fill",
     "Demand Order Block (OB) Rejection + Bullish FVG Imbalance Retest",
     "Change of Character (CHoCH) + Bullish Market Structure Shift (MSS)",
-    "Discount Zone Equilibrium Defense + Institutional Volume Delta Spike"
+    "Discount Zone Equilibrium Defense + Institutional Volume Delta Spike",
+    "Mitigation Block Rejection + RSI Dynamic Oversold Crossover",
+    "Optimal Trade Entry (OTE 70.8% Fib) Bounce + High Demand Expansion"
 ]
 
 SMC_BEARISH_CONFLUENCES = [
     "Institutional Sell-Side Liquidity Sweep at Equal Highs + Supply OB Rejection",
     "Supply Order Block (OB) Breakdown + Bearish FVG Imbalance Retest",
     "Break of Structure (BOS) + Strong Bearish Market Structure Shift",
-    "Premium Supply Zone Rejection + Aggressive Volume Delta Expansion"
+    "Premium Supply Zone Rejection + Aggressive Volume Delta Expansion",
+    "Breaker Block Rejection + Stochastic Overbought Bearish Cross",
+    "Discount Liquidity Target Fill + OTE Premium Zone Rejection"
 ]
 
 class LoginScreen(Screen):
@@ -69,8 +73,11 @@ class LoginScreen(Screen):
         self.bind(size=self._update_rect, pos=self._update_rect)
 
         layout = BoxLayout(
-            orientation='vertical', padding=25, spacing=15,
-            size_hint=(0.9, 0.6), pos_hint={'center_x': 0.5, 'center_y': 0.5}
+            orientation='vertical',
+            padding=25,
+            spacing=15,
+            size_hint=(0.9, 0.6),
+            pos_hint={'center_x': 0.5, 'center_y': 0.5}
         )
 
         with layout.canvas.before:
@@ -80,22 +87,44 @@ class LoginScreen(Screen):
             self.card_line = Line(rounded_rectangle=[layout.x, layout.y, layout.width, layout.height, 16], width=1.2)
         layout.bind(size=self._update_layout_card, pos=self._update_layout_card)
 
-        layout.add_widget(Label(text="[b]HINATA BOT PRO[/b]", markup=True, font_size='22sp', color=TEXT_MAIN, size_hint_y=0.25))
-        layout.add_widget(Label(text="[color=00e673]AI QUANT TRADING TERMINAL[/color]", markup=True, font_size='13sp', color=NEON_GREEN, size_hint_y=0.15))
+        layout.add_widget(Label(
+            text="[b]HINATA BOT PRO[/b]",
+            markup=True, font_size='22sp', color=TEXT_MAIN,
+            size_hint_y=0.25
+        ))
+        layout.add_widget(Label(
+            text="[color=00e673]AI QUANT TRADING TERMINAL[/color]",
+            markup=True, font_size='13sp', color=NEON_GREEN,
+            size_hint_y=0.15
+        ))
 
         u_box = BoxLayout(orientation='vertical', spacing=4, size_hint_y=0.25)
         u_box.add_widget(Label(text="TRADER ID", color=TEXT_SUB, font_size='12sp', halign='left', size_hint_y=0.3, bold=True))
-        self.u_in = TextInput(text="Hinata_Pro_VIP", readonly=True, multiline=False, size_hint_y=0.7, background_color=(0.06, 0.08, 0.12, 1), foreground_color=NEON_GREEN, padding=[12, 10], font_size='14sp')
+        self.u_in = TextInput(
+            text="Hinata_Pro_VIP", readonly=True, multiline=False,
+            size_hint_y=0.7,
+            background_color=(0.06, 0.08, 0.12, 1), foreground_color=NEON_GREEN,
+            padding=[12, 10], font_size='14sp'
+        )
         u_box.add_widget(self.u_in)
         layout.add_widget(u_box)
 
         p_box = BoxLayout(orientation='vertical', spacing=4, size_hint_y=0.25)
         p_box.add_widget(Label(text="ACCESS KEY", color=TEXT_SUB, font_size='12sp', halign='left', size_hint_y=0.3, bold=True))
-        self.p_in = TextInput(password=True, hint_text="Enter Access Key", multiline=False, size_hint_y=0.7, background_color=(0.06, 0.08, 0.12, 1), foreground_color=TEXT_MAIN, padding=[12, 10], font_size='14sp')
+        self.p_in = TextInput(
+            password=True, hint_text="Enter Access Key", multiline=False,
+            size_hint_y=0.7,
+            background_color=(0.06, 0.08, 0.12, 1), foreground_color=TEXT_MAIN,
+            padding=[12, 10], font_size='14sp'
+        )
         p_box.add_widget(self.p_in)
         layout.add_widget(p_box)
 
-        self.btn = Button(text="AUTHENTICATE & ENTER", bold=True, size_hint_y=0.22, background_color=(0,0,0,0), color=(1,1,1,1), font_size='15sp')
+        self.btn = Button(
+            text="AUTHENTICATE & ENTER", bold=True,
+            size_hint_y=0.22,
+            background_color=(0,0,0,0), color=(1,1,1,1), font_size='15sp'
+        )
         with self.btn.canvas.before:
             Color(*NEON_GREEN)
             self.btn_bg = RoundedRectangle(size=self.btn.size, pos=self.btn.pos, radius=[10])
@@ -104,6 +133,7 @@ class LoginScreen(Screen):
 
         self.err = Label(text="", color=NEON_RED, font_size='12sp', size_hint_y=0.1)
         layout.add_widget(self.err)
+
         self.add_widget(layout)
 
     def _update_rect(self, instance, value):
@@ -134,7 +164,7 @@ class DashboardScreen(Screen):
         self.timer_event = None
         self.prep_timer_event = None
         self.pending_signal = None
-        self.signal_history = []
+        self.signal_history = []  # Session Signal Log
 
         with self.canvas.before:
             Color(*BG_COLOR)
@@ -143,19 +173,27 @@ class DashboardScreen(Screen):
 
         root = BoxLayout(orientation='vertical', padding=12, spacing=8)
 
-        # Header
+        # Header Section with History & Clock
         top = BoxLayout(orientation='horizontal', size_hint_y=0.06)
-        top.add_widget(Label(text="[b]HINATA BOT PRO[/b]  |  [color=00e673]QUANT TERMINAL[/color]", markup=True, font_size='14sp', color=TEXT_MAIN, halign='left'))
-        btn_hist = Button(text="📜 HISTORY", size_hint_x=0.28, font_size='11sp', bold=True, background_color=(0.12, 0.16, 0.22, 1), color=NEON_GREEN)
+        top.add_widget(Label(
+            text="[b]HINATA BOT PRO[/b]  |  [color=00e673]QUANT TERMINAL[/color]",
+            markup=True, font_size='14sp', color=TEXT_MAIN, halign='left'
+        ))
+        
+        btn_hist = Button(
+            text="📜 HISTORY", size_hint_x=0.28, font_size='11sp', bold=True,
+            background_color=(0.12, 0.16, 0.22, 1), color=NEON_GREEN
+        )
         btn_hist.bind(on_release=self.open_history_popup)
         top.add_widget(btn_hist)
+
         self.lbl_clock = Label(text="--:--:--", font_size='12sp', color=TEXT_SUB, halign='right')
         top.add_widget(self.lbl_clock)
         root.add_widget(top)
 
         Clock.schedule_interval(self.update_system_clock, 1)
 
-        # Stats
+        # Performance Board
         stats_board = GridLayout(cols=3, size_hint_y=0.08, spacing=6)
         with stats_board.canvas.before:
             Color(*CARD_COLOR)
@@ -167,25 +205,41 @@ class DashboardScreen(Screen):
         stats_board.add_widget(Label(text="[color=9eabbd]ENGINE[/color]\n[b]SMC QUANT 6.0[/b]", markup=True, font_size='11sp', halign='center'))
         root.add_widget(stats_board)
 
-        # Controls 1
+        # Control Bar 1: Pair Search & Timeframe
         ctrl_box1 = GridLayout(cols=2, size_hint_y=0.08, spacing=8)
-        self.pair_btn = Button(text=f"🔍 {self.selected_pair}", background_color=(0.06, 0.08, 0.12, 1), color=TEXT_MAIN, font_size='12sp', bold=True)
+        self.pair_btn = Button(
+            text=f"🔍 {self.selected_pair}",
+            background_color=(0.06, 0.08, 0.12, 1),
+            color=TEXT_MAIN, font_size='12sp', bold=True
+        )
         self.pair_btn.bind(on_release=self.open_pair_search_popup)
-        self.tf_sp = Spinner(text='1 MIN', values=('5 SEC', '10 SEC', '15 SEC', '30 SEC', '1 MIN', '2 MIN', '5 MIN'), background_color=(0.06, 0.08, 0.12, 1), color=NEON_GREEN, font_size='12sp', bold=True)
+
+        self.tf_sp = Spinner(
+            text='1 MIN',
+            values=('5 SEC', '10 SEC', '15 SEC', '30 SEC', '1 MIN', '2 MIN', '5 MIN'),
+            background_color=(0.06, 0.08, 0.12, 1), color=NEON_GREEN, font_size='12sp', bold=True
+        )
         ctrl_box1.add_widget(self.pair_btn)
         ctrl_box1.add_widget(self.tf_sp)
         root.add_widget(ctrl_box1)
 
-        # Controls 2
+        # Control Bar 2: Mode Selector & Martingale Calculator Popup Button
         ctrl_box2 = GridLayout(cols=2, size_hint_y=0.07, spacing=8)
-        self.mode_sp = Spinner(text='SAFE MODE', values=('SAFE MODE', 'SCALPING MODE'), background_color=(0.06, 0.08, 0.12, 1), color=(1.0, 0.8, 0.2, 1), font_size='11sp', bold=True)
-        btn_mg = Button(text="🧮 MARTINGALE CALC", background_color=(0.12, 0.16, 0.22, 1), color=TEXT_MAIN, font_size='11sp', bold=True)
+        self.mode_sp = Spinner(
+            text='SAFE MODE',
+            values=('SAFE MODE', 'SCALPING MODE'),
+            background_color=(0.06, 0.08, 0.12, 1), color=(1.0, 0.8, 0.2, 1), font_size='11sp', bold=True
+        )
+        btn_mg = Button(
+            text="🧮 MARTINGALE CALC",
+            background_color=(0.12, 0.16, 0.22, 1), color=TEXT_MAIN, font_size='11sp', bold=True
+        )
         btn_mg.bind(on_release=self.open_martingale_popup)
         ctrl_box2.add_widget(self.mode_sp)
         ctrl_box2.add_widget(btn_mg)
         root.add_widget(ctrl_box2)
 
-        # Card Area
+        # Main Signal Display Dashboard
         self.card = BoxLayout(orientation='vertical', padding=15, spacing=8, size_hint_y=0.58)
         with self.card.canvas.before:
             Color(*CARD_COLOR)
@@ -213,7 +267,10 @@ class DashboardScreen(Screen):
         info_grid.add_widget(self.lbl_timer)
         info_grid.add_widget(self.lbl_acc)
 
-        self.lbl_conf = Label(text="[color=9eabbd]Technical Confluence:[/color]\nSelect Pair & Timeframe, then tap Analyze Live Market", markup=True, font_size='11sp', color=TEXT_SUB, halign='center', size_hint_y=0.2)
+        self.lbl_conf = Label(
+            text="[color=9eabbd]Technical Confluence:[/color]\nSelect Pair & Timeframe, then tap Analyze Live Market",
+            markup=True, font_size='11sp', color=TEXT_SUB, halign='center', size_hint_y=0.2
+        )
 
         self.card.add_widget(self.sig_title)
         self.card.add_widget(self.close_pred)
@@ -221,8 +278,12 @@ class DashboardScreen(Screen):
         self.card.add_widget(self.lbl_conf)
         root.add_widget(self.card)
 
-        # Button
-        self.an_btn = Button(text="ANALYZE LIVE MARKET", bold=True, size_hint_y=0.11, background_color=(0,0,0,0), color=(1,1,1,1), font_size='15sp')
+        # Trigger Button
+        self.an_btn = Button(
+            text="ANALYZE LIVE MARKET", bold=True,
+            size_hint_y=0.11,
+            background_color=(0,0,0,0), color=(1,1,1,1), font_size='15sp'
+        )
         with self.an_btn.canvas.before:
             Color(*NEON_GREEN)
             self.an_bg = RoundedRectangle(size=self.an_btn.size, pos=self.an_btn.pos, radius=[10])
@@ -236,7 +297,12 @@ class DashboardScreen(Screen):
 
     def open_pair_search_popup(self, instance):
         content = BoxLayout(orientation='vertical', spacing=10, padding=10)
-        search_input = TextInput(hint_text="Search Quotex OTC Pair...", multiline=False, size_hint_y=None, height=45, background_color=(0.06, 0.08, 0.12, 1), foreground_color=TEXT_MAIN, padding=[10, 10], font_size='14sp')
+        search_input = TextInput(
+            hint_text="Search Quotex OTC Pair...",
+            multiline=False, size_hint_y=None, height=45,
+            background_color=(0.06, 0.08, 0.12, 1), foreground_color=TEXT_MAIN,
+            padding=[10, 10], font_size='14sp'
+        )
         content.add_widget(search_input)
 
         scroll = ScrollView(size_hint=(1, 1))
@@ -247,7 +313,11 @@ class DashboardScreen(Screen):
             pair_list_layout.clear_widgets()
             for pair in QUOTEX_EXACT_PAIRS:
                 if filter_text.lower() in pair.lower():
-                    btn = Button(text=pair, size_hint_y=None, height=42, background_color=(0.12, 0.16, 0.22, 1), color=TEXT_MAIN, font_size='13sp')
+                    btn = Button(
+                        text=pair, size_hint_y=None, height=42,
+                        background_color=(0.12, 0.16, 0.22, 1), color=TEXT_MAIN,
+                        font_size='13sp'
+                    )
                     btn.bind(on_release=lambda b, p=pair: select_pair(p))
                     pair_list_layout.add_widget(btn)
 
@@ -258,10 +328,16 @@ class DashboardScreen(Screen):
 
         search_input.bind(text=lambda instance, val: populate_list(val))
         populate_list()
+
         scroll.add_widget(pair_list_layout)
         content.add_widget(scroll)
 
-        popup = Popup(title="Select Quotex OTC Trade Pair", content=content, size_hint=(0.9, 0.85), background_color=(0.05, 0.07, 0.10, 0.95))
+        popup = Popup(
+            title="Select Quotex OTC Trade Pair",
+            content=content,
+            size_hint=(0.9, 0.85),
+            background_color=(0.05, 0.07, 0.10, 0.95)
+        )
         popup.open()
 
     def open_martingale_popup(self, instance):
@@ -274,7 +350,10 @@ class DashboardScreen(Screen):
         in_box.add_widget(amount_input)
         content.add_widget(in_box)
 
-        res_lbl = Label(text="• Base Trade: $10.0\n• Step 1 (2.2x): $22.0\n• Step 2 (4.8x): $48.0", font_size='13sp', color=TEXT_MAIN, size_hint_y=0.45, halign='left')
+        res_lbl = Label(
+            text="• Base Trade: $10.0\n• Step 1 (2.2x): $22.0\n• Step 2 (4.8x): $48.0",
+            font_size='13sp', color=TEXT_MAIN, size_hint_y=0.45, halign='left'
+        )
         content.add_widget(res_lbl)
 
         def recalculate(instance, value):
@@ -285,6 +364,7 @@ class DashboardScreen(Screen):
                 res_lbl.text = "Please enter valid numeric trade amount!"
 
         amount_input.bind(text=recalculate)
+
         close_btn = Button(text="CLOSE CALCULATOR", size_hint_y=0.2, background_color=(0.12, 0.16, 0.22, 1), color=NEON_GREEN, bold=True)
         content.add_widget(close_btn)
 
@@ -302,7 +382,10 @@ class DashboardScreen(Screen):
             hist_layout.add_widget(Label(text="No signals generated in current session.", color=TEXT_SUB, font_size='13sp', size_hint_y=None, height=40))
         else:
             for item in reversed(self.signal_history):
-                lbl = Label(text=f"[{item['time']}] {item['pair']} ({item['tf']})\n{item['signal']} | Acc: {item['acc']:.1f}%", color=item['color'], font_size='12sp', size_hint_y=None, height=45, halign='left')
+                lbl = Label(
+                    text=f"[{item['time']}] {item['pair']} ({item['tf']})\n{item['signal']} | Acc: {item['acc']:.1f}%",
+                    color=item['color'], font_size='12sp', size_hint_y=None, height=45, halign='left'
+                )
                 lbl.bind(size=lbl.setter('text_size'))
                 hist_layout.add_widget(lbl)
 
@@ -334,6 +417,7 @@ class DashboardScreen(Screen):
         self.an_bg.pos = instance.pos
 
     def trigger_vibration(self):
+        # Vibrates phone upon entry signal execution on Android
         if vibrator:
             try:
                 vibrator.vibrate(0.3)
@@ -348,62 +432,20 @@ class DashboardScreen(Screen):
 
         tf = self.tf_sp.text
         mode = self.mode_sp.text
-        rsi = random.uniform(20, 80)
-        stoch = random.uniform(15, 85)
+        rsi = random.uniform(18, 82)
+        stoch = random.uniform(12, 88)
 
-        signal_type = random.choice(["CALL", "PUT"])
+        # Volatility Threshold Adjustments based on Mode
+        bad_market_chance = 15 if mode == "SAFE MODE" else 8
+        market_condition = random.choices(["SAFE", "VOLATILE"], weights=[100 - bad_market_chance, bad_market_chance])[0]
 
-        if signal_type == "CALL":
-            color = NEON_GREEN
-            sig_text = "SIGNAL: CALL (BUY / UP)"
-            pred_text = "Candle Close Prediction: HIGH (GREEN CANDLE)"
-            acc = random.uniform(98.8, 99.9) if mode == "SAFE MODE" else random.uniform(96.5, 98.5)
-            smc_reason = random.choice(SMC_BULLISH_CONFLUENCES)
-            conf = f"[SMC QUANT ALGORITHM ({mode})]\n• {smc_reason}\n• RSI ({rsi:.1f}) Bullish | Stoch ({stoch:.1f})"
-        else:
-            color = NEON_RED
-            sig_text = "SIGNAL: PUT (SELL / DOWN)"
-            pred_text = "Candle Close Prediction: LOW (RED CANDLE)"
-            acc = random.uniform(98.8, 99.9) if mode == "SAFE MODE" else random.uniform(96.5, 98.5)
-            smc_reason = random.choice(SMC_BEARISH_CONFLUENCES)
-            conf = f"[SMC QUANT ALGORITHM ({mode})]\n• {smc_reason}\n• RSI ({rsi:.1f}) Bearish | Stoch ({stoch:.1f})"
-
-        self.pending_signal = {
-            'sig_text': sig_text,
-            'color': color,
-            'pred_text': pred_text,
-            'acc': acc,
-            'conf': conf,
-            'tf': tf
-        }
-
-        self.prep_sec = 5
-        self.an_btn.disabled = True
-        self.an_btn.text = "ANALYZING MARKET..."
-        
-        # GREEN / RED COLOR DISPLAY DURING 5 SEC PREPARATION COUNTDOWN
-        self.sig_title.text = "PREPARING ENTRY: 05 SEC"
-        self.sig_title.color = self.pending_signal['color']
-        self.close_pred.text = f"Filtering OTC Spikes ({mode})..."
-        self.close_pred.color = TEXT_SUB
-
-        self.prep_timer_event = Clock.schedule_interval(self.update_prep_countdown, 1)
-
-    def update_prep_countdown(self, dt):
-        if self.prep_sec > 1:
-            self.prep_sec -= 1
-            self.sig_title.text = f"PREPARING ENTRY: {self.prep_sec:02d} SEC"
-            self.sig_title.color = self.pending_signal['color']
-        else:
-            if self.prep_timer_event:
-                self.prep_timer_event.cancel()
-            self.execute_final_signal()
-
-    def execute_final_signal(self):
-        s = self.pending_signal
-        now = datetime.now().strftime("%H:%M:%S")
-
-        self.sig_title.text = s['sig_text']
-        self.sig_title.color = s['color']
-        self.close_pred.text = s['pred_text']
-  
+        if market_condition == "VOLATILE":
+            color = (1.0, 0.6, 0.0, 1)
+            sig_text = "MARKET ALERT: NO TRADE"
+            prep_label = "PREPARING ALERT: NO TRADE"
+            pred_text = "Market Condition: Highly Volatile / Irregular OTC Spikes"
+            acc = random.uniform(42.0, 52.0)
+            conf = f"[{mode} RISK FILTER ACTIVATED]\n• Unstable Volume Delta & Wick Spikes Detected\n• Avoid Trading on Current Candle"
+            
+            self.pending_signal = {
+                'sig_tex
