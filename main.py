@@ -1,6 +1,9 @@
 import os
 import random
 from datetime import datetime
+
+# Safe Kivy & Window Imports for Android/Buildozer Host Environment
+import kivy
 from kivy.app import App
 from kivy.clock import Clock
 from kivy.uix.screenmanager import ScreenManager, Screen
@@ -18,7 +21,7 @@ from kivy.graphics import Color, Rectangle, RoundedRectangle, Line
 # Safely import vibration for Android APK
 try:
     from plyer import vibrator
-except ImportError:
+except Exception:
     vibrator = None
 
 # Neon Dark Theme Palette
@@ -164,7 +167,7 @@ class DashboardScreen(Screen):
         self.timer_event = None
         self.prep_timer_event = None
         self.pending_signal = None
-        self.signal_history = []  # Session Signal Log
+        self.signal_history = []
 
         with self.canvas.before:
             Color(*BG_COLOR)
@@ -417,7 +420,6 @@ class DashboardScreen(Screen):
         self.an_bg.pos = instance.pos
 
     def trigger_vibration(self):
-        # Vibrates phone upon entry signal execution on Android
         if vibrator:
             try:
                 vibrator.vibrate(0.3)
@@ -435,12 +437,11 @@ class DashboardScreen(Screen):
         rsi = random.uniform(18, 82)
         stoch = random.uniform(12, 88)
 
-        # Volatility Threshold Adjustments based on Mode
         bad_market_chance = 15 if mode == "SAFE MODE" else 8
         market_condition = random.choices(["SAFE", "VOLATILE"], weights=[100 - bad_market_chance, bad_market_chance])[0]
 
         if market_condition == "VOLATILE":
-            color = (1.0, 0.6, 0.0, 1)  # Orange for Volatile Alert
+            color = (1.0, 0.6, 0.0, 1)
             sig_text = "MARKET ALERT: NO TRADE"
             pred_text = "Market Condition: Highly Volatile / Irregular OTC Spikes"
             acc = random.uniform(42.0, 52.0)
@@ -448,4 +449,7 @@ class DashboardScreen(Screen):
             
             self.pending_signal = {
                 'sig_text': sig_text,
-          
+                'color': color,
+                'pred_text': pred_text,
+                'acc': acc,
+   
