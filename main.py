@@ -165,6 +165,7 @@ class DashboardScreen(Screen):
         self.prep_timer_event = None
         self.pending_signal = None
         self.signal_history = []  # Session Signal Log
+        self.active_timer_color = "00e673"  # Default Green timer color
 
         with self.canvas.before:
             Color(*BG_COLOR)
@@ -446,6 +447,4 @@ class DashboardScreen(Screen):
             pred_text = "Market Condition: Highly Volatile / Irregular OTC Spikes"
             acc = random.uniform(42.0, 52.0)
             conf = f"[{mode} RISK FILTER ACTIVATED]\n• Unstable Volume Delta & Wick Spikes Detected\n• Avoid Trading on Current Candle"
-            
-            self.pending_signal = {
-                'sig_tex
+ 
