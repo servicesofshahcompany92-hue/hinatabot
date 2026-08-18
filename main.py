@@ -1,7 +1,7 @@
 import json
+import urllib.request
 import threading
 import time
-from websocket import create_connection
 
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
@@ -20,7 +20,7 @@ class HinataBotOverlay(BoxLayout):
             self.rect = Rectangle(size=self.size, pos=self.pos)
         self.bind(size=self._update_rect, pos=self._update_rect)
 
-        # UI Elements
+        # Header Title
         self.title_label = Label(
             text="HINATA BOT - REAL LIVE MARKET SCANNER",
             font_size='16sp',
@@ -30,8 +30,9 @@ class HinataBotOverlay(BoxLayout):
         )
         self.add_widget(self.title_label)
 
+        # Signal Box
         self.signal_label = Label(
-            text="CONNECTING TO LIVE WEBSOCKET...",
+            text="CONNECTING TO REAL LIVE MARKET...",
             font_size='20sp',
             bold=True,
             color=(1, 1, 1, 1),
@@ -39,6 +40,7 @@ class HinataBotOverlay(BoxLayout):
         )
         self.add_widget(self.signal_label)
 
+        # Live Price & Metrics
         self.timer_label = Label(
             text="Live Price: -- | RSI: --",
             font_size='14sp',
@@ -55,17 +57,18 @@ class HinataBotOverlay(BoxLayout):
         )
         self.add_widget(self.stats_label)
 
+        # Controls
         self.scan_btn = Button(
-            text="RECONNECT FEED",
+            text="REFRESH DATA FEED",
             font_size='16sp',
             bold=True,
             size_hint_y=0.2,
             background_color=(0.6, 0.2, 0.9, 1)
         )
-        self.scan_btn.bind(on_press=self.restart_websocket)
+        self.scan_btn.bind(on_press=self.restart_feed)
         self.add_widget(self.scan_btn)
 
-        # Real-time Data Variables
+        # Real-time Variables
         self.prices = []
         self.latest_price = 0.0
         self.current_rsi = "--"
@@ -73,17 +76,17 @@ class HinataBotOverlay(BoxLayout):
         self.ema_slow_val = "--"
         self.running = True
 
-        # Start Live WebSocket Feed Thread
-        self.start_ws_thread()
+        # Live Data Thread
+        self.start_feed_thread()
 
-        # UI Update Loop (Every 1 Sec)
+        # UI Loop
         Clock.schedule_interval(self.update_ui, 1)
 
     def _update_rect(self, instance, value):
         self.rect.pos = instance.pos
         self.rect.size = instance.size
 
-    # Technical Indicator Calculation (Pure Math)
+    # Technical Indicators (Pure Python)
     def calculate_ema(self, prices, period):
         if len(prices) < period:
             return None
@@ -114,49 +117,52 @@ class HinataBotOverlay(BoxLayout):
         rs = avg_gain / avg_loss
         return 100 - (100 / (1 + rs))
 
-    # WebSocket Background Thread For Live Data
-    def start_ws_thread(self):
-        ws_thread = threading.Thread(target=self.fetch_real_prices, daemon=True)
-        ws_thread.start()
+    # Live Feed Fetcher (Standard Library - No Extra Packages Needed)
+    def start_feed_thread(self):
+        feed_thread = threading.Thread(target=self.fetch_real_prices, daemon=True)
+        feed_thread.start()
 
     def fetch_real_prices(self):
+        url = "https://api.binance.com/api/v3/ticker/price?symbol=EURUSDT"
         while self.running:
             try:
-                # Direct WebSocket Connection to Live Forex Data Feed
-                ws = create_connection("wss://stream.binance.com:9443/ws/eurusdt@ticker")
-                while self.running:
-                    result = ws.recv()
-                    data = json.loads(result)
-                    if 'c' in data: # Current price tick
-                        price = float(data['c'])
-                        self.latest_price = price
-                        self.prices.append(price)
+                req = urllib.request.Request(
+                    url, 
+                    headers={'User-Agent': 'Mozilla/5.0'}
+                )
+                response = urllib.request.urlopen(req, timeout=5)
+                data = json.loads(response.read().decode())
+                
+                if 'price' in data:
+                    price = float(data['price'])
+                    self.latest_price = price
+                    self.prices.append(price)
 
-                        if len(self.prices) > 60:
-                            self.prices.pop(0)
+                    if len(self.prices) > 60:
+                        self.prices.pop(0)
 
-                        # Calculate Real Indicators
-                        if len(self.prices) >= 25:
-                            rsi = self.calculate_rsi(self.prices, 14)
-                            ema9 = self.calculate_ema(self.prices, 9)
-                            ema21 = self.calculate_ema(self.prices, 21)
+                    if len(self.prices) >= 25:
+                        rsi = self.calculate_rsi(self.prices, 14)
+                        ema9 = self.calculate_ema(self.prices, 9)
+                        ema21 = self.calculate_ema(self.prices, 21)
 
-                            if rsi and ema9 and ema21:
-                                self.current_rsi = f"{rsi:.1f}"
-                                self.ema_fast_val = f"{ema9:.5f}"
-                                self.ema_slow_val = f"{ema21:.5f}"
-            except Exception as e:
-                time.sleep(3) # Retry connection on drop
+                        if rsi and ema9 and ema21:
+                            self.current_rsi = f"{rsi:.1f}"
+                            self.ema_fast_val = f"{ema9:.5f}"
+                            self.ema_slow_val = f"{ema21:.5f}"
+            except Exception:
+                pass
+            time.sleep(2) # Fetch live price tick every 2 seconds
 
     def update_ui(self, dt):
         if len(self.prices) < 25:
-            self.signal_label.text = f"BUFFERING REAL TICKS... ({len(self.prices)}/25)"
+            self.signal_label.text = f"FETCHING REAL TICKS... ({len(self.prices)}/25)"
             return
 
         self.timer_label.text = f"Price: {self.latest_price:.5f} | RSI: {self.current_rsi}"
         self.stats_label.text = f"EMA9: {self.ema_fast_val} | EMA21: {self.ema_slow_val}"
 
-        # Real Confluence Trading Rules
+        # Real Confluence Strategy
         try:
             rsi_val = float(self.current_rsi)
             ema9_val = float(self.ema_fast_val)
@@ -174,9 +180,9 @@ class HinataBotOverlay(BoxLayout):
         except ValueError:
             pass
 
-    def restart_websocket(self, instance):
+    def restart_feed(self, instance):
         self.prices.clear()
-        self.signal_label.text = "RECONNECTING FEED..."
+        self.signal_label.text = "RECONNECTING LIVE FEED..."
 
 class HinataBotApp(App):
     def build(self):
