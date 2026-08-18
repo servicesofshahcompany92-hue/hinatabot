@@ -87,15 +87,17 @@ class OverlayScreen(Screen):
             size_hint_y=0.08
         ))
 
-        # 2. Control Row: Pair Selection & Timeframe Selection
+        # 2. Control Row: Complete Pair List & Timeframe Selection
         control_row = BoxLayout(spacing=8, size_hint_y=0.12)
         
-        # Quotex Pair Dropdown
+        # Complete Quotex Pair Dropdown
         self.pair_spinner = Spinner(
             text='EUR/USD (OTC)',
             values=(
                 'EUR/USD (OTC)', 'GBP/USD (OTC)', 'USD/JPY (OTC)', 
                 'AUD/CAD (OTC)', 'USD/BRL (OTC)', 'EUR/GBP (OTC)',
+                'NZD/USD (OTC)', 'USD/CAD (OTC)', 'USD/CHF (OTC)',
+                'EUR/JPY (OTC)', 'GBP/JPY (OTC)', 'Crypto IDX (OTC)',
                 'EUR/USD', 'GBP/USD', 'USD/JPY'
             ),
             size_hint_x=0.6,
@@ -104,10 +106,10 @@ class OverlayScreen(Screen):
         self.pair_spinner.bind(text=self.on_pair_change)
         control_row.add_widget(self.pair_spinner)
 
-        # Expiry Time Selection Dropdown
+        # Full Timeframe Selection Dropdown
         self.time_spinner = Spinner(
             text='1 MIN',
-            values=('1 MIN', '2 MIN', '5 MIN'),
+            values=('5 SEC', '10 SEC', '15 SEC', '30 SEC', '1 MIN', '2 MIN', '5 MIN'),
             size_hint_x=0.4,
             font_size='11sp'
         )
@@ -179,19 +181,23 @@ class OverlayScreen(Screen):
         self.prices.clear()
         self.signal_label.text = f"SWITCHED TO {text}"
 
+    def get_seconds_from_timeframe(self, text):
+        if '5 SEC' in text: return 5
+        if '10 SEC' in text: return 10
+        if '15 SEC' in text: return 15
+        if '30 SEC' in text: return 30
+        if '1 MIN' in text: return 60
+        if '2 MIN' in text: return 120
+        if '5 MIN' in text: return 300
+        return 60
+
     def on_time_change(self, spinner, text):
-        if '1' in text:
-            self.countdown = 60
-        elif '2' in text:
-            self.countdown = 120
-        elif '5' in text:
-            self.countdown = 300
+        self.countdown = self.get_seconds_from_timeframe(text)
 
     def update_timer(self, dt):
         self.countdown -= 1
         if self.countdown <= 0:
-            time_text = self.time_spinner.text
-            self.countdown = 60 if '1' in time_text else (120 if '2' in time_text else 300)
+            self.countdown = self.get_seconds_from_timeframe(self.time_spinner.text)
 
     # Fast Math Indicators
     def calculate_ema(self, prices, period):
@@ -240,7 +246,7 @@ class OverlayScreen(Screen):
                     self.current_rsi = f"{r:.1f}"
                     self.ema9 = f"{e9:.5f}"
                     self.ema21 = f"{e21:.5f}"
-            time.sleep(2)
+            time.sleep(1)
 
     def update_ui(self, dt):
         mins = self.countdown // 60
