@@ -1,5 +1,4 @@
 import math
-import threading
 import time
 
 from kivy.app import App
@@ -88,7 +87,7 @@ class OverlayScreen(Screen):
         )
         main_layout.add_widget(self.header_label)
 
-        # 2. Dropdowns Row (Full All-Pairs Selector)
+        # 2. Dropdowns Row
         control_row = BoxLayout(spacing=6, size_hint_y=0.12)
         
         self.pair_spinner = Spinner(
@@ -181,10 +180,9 @@ class OverlayScreen(Screen):
         self.accuracy_val = 0.0
         self.step_counter = 0
 
-        # Threads and Clocks
-        threading.Thread(target=self.market_engine, daemon=True).start()
-        Clock.schedule_interval(self.update_timer, 1)
-        Clock.schedule_interval(self.update_ui, 0.5)
+        # Kivy Safe Timers (No Threading needed)
+        Clock.schedule_interval(self.tick_market, 0.5)
+        Clock.schedule_interval(self.update_timer, 1.0)
 
     def _update_rect(self, instance, value):
         self.rect.pos = instance.pos
@@ -235,28 +233,27 @@ class OverlayScreen(Screen):
             return 100
         return 100 - (100 / (1 + (avg_gain / avg_loss)))
 
-    def market_engine(self):
-        while True:
-            self.step_counter += 1
-            delta = math.sin(self.step_counter * 0.4) * 0.0009 + (math.cos(self.step_counter * 0.2) * 0.0004)
-            self.latest_price = round(self.latest_price + delta, 5)
-            self.prices.append(self.latest_price)
+    def tick_market(self, dt):
+        # Tick calculations
+        self.step_counter += 1
+        delta = math.sin(self.step_counter * 0.4) * 0.0009 + (math.cos(self.step_counter * 0.2) * 0.0004)
+        self.latest_price = round(self.latest_price + delta, 5)
+        self.prices.append(self.latest_price)
 
-            if len(self.prices) > 40:
-                self.prices.pop(0)
+        if len(self.prices) > 40:
+            self.prices.pop(0)
 
-            if len(self.prices) >= 12:
-                r = self.calculate_rsi(self.prices, 10)
-                e9 = self.calculate_ema(self.prices, 7)
-                e21 = self.calculate_ema(self.prices, 12)
+        if len(self.prices) >= 12:
+            r = self.calculate_rsi(self.prices, 10)
+            e9 = self.calculate_ema(self.prices, 7)
+            e21 = self.calculate_ema(self.prices, 12)
 
-                if r and e9 and e21:
-                    self.current_rsi = f"{r:.1f}"
-                    self.ema9 = f"{e9:.5f}"
-                    self.ema21 = f"{e21:.5f}"
-            time.sleep(0.5)
+            if r and e9 and e21:
+                self.current_rsi = f"{r:.1f}"
+                self.ema9 = f"{e9:.5f}"
+                self.ema21 = f"{e21:.5f}"
 
-    def update_ui(self, dt):
+        # Update UI directly
         current_time_str = time.strftime("%H:%M:%S")
         self.header_label.text = f"HINATA BOT | Live Time: {current_time_str}"
         self.price_label.text = f"Price: {self.latest_price:.5f} | 1m Candle: 00:{self.candle_timer:02d}"
@@ -276,27 +273,22 @@ class OverlayScreen(Screen):
 
             ema_diff = abs(e9_val - e21_val)
 
-            # Signal Decision Engine with Sideways Protection
             if self.active_direction is None or self.active_direction == "NO_TRADE":
-                # 1. UP SIGNAL (Over-sold + Bullish EMA Crossover)
                 if r_val <= 38 and e9_val > e21_val:
                     self.active_direction = "UP"
                     self.signal_timer = 5
                     self.accuracy_val = round(93.5 + (abs(38 - r_val) * 0.5), 1)
                     if self.accuracy_val > 99.1: self.accuracy_val = 99.1
                 
-                # 2. DOWN SIGNAL (Over-bought + Bearish EMA Crossover)
                 elif r_val >= 62 and e9_val < e21_val:
                     self.active_direction = "DOWN"
                     self.signal_timer = 5
                     self.accuracy_val = round(93.5 + (abs(r_val - 62) * 0.5), 1)
                     if self.accuracy_val > 99.1: self.accuracy_val = 99.1
 
-                # 3. NO TRADE SIGNAL (Sideways Market Filter)
                 elif 39 <= r_val <= 61 or ema_diff < 0.00005:
                     self.active_direction = "NO_TRADE"
 
-            # UI Rendering Logic
             if self.active_direction == "UP":
                 self.signal_box.text = f"🔥 HIGH WIN CALL / UP ({expiry})\nTAKE ENTRY: 0{self.signal_timer}s"
                 self.signal_box.color = (0, 1, 0, 1)
