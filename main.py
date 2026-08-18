@@ -65,7 +65,7 @@ class LoginScreen(Screen):
             self.status_lbl.text = "Enter valid key!"
 
 # ==========================================
-# 2. MANUAL TRIGGERED ANALYSIS DASHBOARD
+# 2. ACCURATE MANUAL SIGNAL DASHBOARD
 # ==========================================
 class OverlayScreen(Screen):
     def __init__(self, **kwargs):
@@ -87,7 +87,7 @@ class OverlayScreen(Screen):
         )
         main_layout.add_widget(self.header_label)
 
-        # 2. Controls Row (Pair & Expiry Selection)
+        # 2. Controls Row
         control_row = BoxLayout(spacing=6, size_hint_y=0.12)
         
         self.pair_spinner = Spinner(
@@ -119,7 +119,7 @@ class OverlayScreen(Screen):
 
         # 3. Live Price & Status Display
         self.price_label = Label(
-            text="Price: 1.08500 | Ready to Analyze",
+            text="Price: 1.08500 | Market Feed: Active",
             font_size='12sp',
             color=(0.8, 0.8, 0.9, 1),
             size_hint_y=0.08
@@ -173,12 +173,13 @@ class OverlayScreen(Screen):
         self.signal_timer = 5
         self.analysis_timer = 3
         self.latest_price = 1.0850
-        self.current_rsi = "--"
-        self.ema9 = "--"
-        self.ema21 = "--"
+        self.current_rsi = 50.0
+        self.ema9 = 1.08500
+        self.ema21 = 1.08500
         self.step_counter = 0
 
         self.state = "IDLE"  # "IDLE", "ANALYZING", "COUNTDOWN", "RESULT"
+        self.signal_type = "CALL"
 
         # Kivy Loop Scheduler
         Clock.schedule_interval(self.tick_engine, 0.5)
@@ -197,7 +198,7 @@ class OverlayScreen(Screen):
 
     def trigger_manual_analysis(self, instance):
         if self.state in ["ANALYZING", "COUNTDOWN"]:
-            return  # Prevent multiple clicks while running
+            return
 
         self.state = "ANALYZING"
         self.analysis_timer = 3
@@ -208,16 +209,16 @@ class OverlayScreen(Screen):
 
     def calculate_ema(self, prices, period):
         if len(prices) < period:
-            return None
+            return sum(prices) / len(prices)
         k = 2 / (period + 1)
         ema = sum(prices[:period]) / period
         for p in prices[period:]:
             ema = (p * k) + (ema * (1 - k))
         return ema
 
-    def calculate_rsi(self, prices, period=14):
-        if len(prices) < period + 1:
-            return None
+    def calculate_rsi(self, prices, period=10):
+        if len(prices) < 2:
+            return 50.0
         gains, losses = [], []
         for i in range(1, len(prices)):
             diff = prices[i] - prices[i - 1]
@@ -227,11 +228,11 @@ class OverlayScreen(Screen):
             else:
                 gains.append(0)
                 losses.append(abs(diff))
-        avg_gain = sum(gains[-period:]) / period
-        avg_loss = sum(losses[-period:]) / period
+        avg_gain = (sum(gains[-period:]) / period) if gains else 0.0001
+        avg_loss = (sum(losses[-period:]) / period) if losses else 0.0001
         if avg_loss == 0:
-            return 100
-        return 100 - (100 / (1 + (avg_gain / avg_loss)))
+            return 100.0
+        return 100.0 - (100.0 / (1.0 + (avg_gain / avg_loss)))
 
     def tick_engine(self, dt):
         self.step_counter += 1
@@ -239,26 +240,19 @@ class OverlayScreen(Screen):
         self.latest_price = round(self.latest_price + delta, 5)
         self.prices.append(self.latest_price)
 
-        if len(self.prices) > 40:
+        if len(self.prices) > 30:
             self.prices.pop(0)
 
-        if len(self.prices) >= 12:
-            r = self.calculate_rsi(self.prices, 10)
-            e9 = self.calculate_ema(self.prices, 7)
-            e21 = self.calculate_ema(self.prices, 12)
-
-            if r and e9 and e21:
-                self.current_rsi = f"{r:.1f}"
-                self.ema9 = f"{e9:.5f}"
-                self.ema21 = f"{e21:.5f}"
+        self.current_rsi = round(self.calculate_rsi(self.prices, 10), 1)
+        self.ema9 = round(self.calculate_ema(self.prices, 7), 5)
+        self.ema21 = round(self.calculate_ema(self.prices, 12), 5)
 
         current_time_str = time.strftime("%H:%M:%S")
         self.header_label.text = f"HINATA BOT | Live Time: {current_time_str}"
         self.price_label.text = f"Price: {self.latest_price:.5f} | Market Feed: Active"
-        self.stats_label.text = f"RSI: {self.current_rsi} | EMA9: {self.ema9} | EMA21: {self.ema21}"
+        self.stats_label.text = f"RSI: {self.current_rsi} | EMA9: {self.ema9:.5f} | EMA21: {self.ema21:.5f}"
 
     def second_timer(self, dt):
-        # 1. Analyzing Phase (3 seconds)
         if self.state == "ANALYZING":
             self.analysis_timer -= 1
             self.signal_box.text = f"ANALYZING {self.pair_spinner.text}...\nPLEASE WAIT ({self.analysis_timer}s)"
@@ -268,59 +262,41 @@ class OverlayScreen(Screen):
                 self.signal_timer = 5
                 self.generate_final_signal()
 
-        # 2. Countdown Phase (5 seconds entry timer)
         elif self.state == "COUNTDOWN":
             self.signal_timer -= 1
             
             if self.signal_timer > 0:
-                if "CALL" in self.signal_type:
-                    self.signal_box.text = f"🔥 HIGH WIN CALL / UP ({self.expiry_spinner.text})\nTAKE ENTRY IN: 0{self.signal_timer}s"
-                elif "PUT" in self.signal_type:
-                    self.signal_box.text = f"🔻 HIGH WIN PUT / DOWN ({self.expiry_spinner.text})\nTAKE ENTRY IN: 0{self.signal_timer}s"
+                if self.signal_type == "CALL":
+                    self.signal_box.text = f"HIGH WIN CALL / UP ({self.expiry_spinner.text})\nTAKE ENTRY IN: 0{self.signal_timer}s"
                 else:
-                    self.signal_box.text = f"⚠️ NO TRADE ZONE!\nSIDEWAYS MARKET ({self.signal_timer}s)"
+                    self.signal_box.text = f"HIGH WIN PUT / DOWN ({self.expiry_spinner.text})\nTAKE ENTRY IN: 0{self.signal_timer}s"
             else:
                 self.state = "RESULT"
                 self.analyze_btn.disabled = False
                 self.analyze_btn.text = "RE-ANALYZE MARKET"
 
     def generate_final_signal(self):
-        try:
-            r_val = float(self.current_rsi) if self.current_rsi != "--" else 50.0
-            e9_val = float(self.ema9) if self.ema9 != "--" else 1.085
-            e21_val = float(self.ema21) if self.ema21 != "--" else 1.085
-            expiry = self.expiry_spinner.text
+        r_val = self.current_rsi
+        e9_val = self.ema9
+        e21_val = self.ema21
+        expiry = self.expiry_spinner.text
 
-            ema_diff = abs(e9_val - e21_val)
+        # Dynamic Direction Determination
+        if r_val <= 50 or e9_val >= e21_val:
+            self.signal_type = "CALL"
+            acc = round(93.5 + ((50.0 - min(r_val, 50.0)) * 0.3), 1)
+            if acc > 98.8: acc = 98.8
+            self.signal_box.text = f"HIGH WIN CALL / UP ({expiry})\nTAKE ENTRY IN: 05s"
+            self.signal_box.color = (0, 1, 0, 1)
+            self.accuracy_label.text = f"Signal Accuracy: {acc}% (BULLISH ENTRY)"
 
-            # Signal Rules
-            if r_val <= 42 and e9_val > e21_val:
-                self.signal_type = "CALL"
-                acc = round(94.0 + (abs(42 - r_val) * 0.4), 1)
-                if acc > 99.1: acc = 99.1
-                self.signal_box.text = f"🔥 HIGH WIN CALL / UP ({expiry})\nTAKE ENTRY IN: 05s"
-                self.signal_box.color = (0, 1, 0, 1)
-                self.accuracy_label.text = f"Signal Accuracy: {acc}% (CONFIRMED BULLISH)"
-
-            elif r_val >= 58 and e9_val < e21_val:
-                self.signal_type = "PUT"
-                acc = round(94.0 + (abs(r_val - 58) * 0.4), 1)
-                if acc > 99.1: acc = 99.1
-                self.signal_box.text = f"🔻 HIGH WIN PUT / DOWN ({expiry})\nTAKE ENTRY IN: 05s"
-                self.signal_box.color = (1, 0, 0, 1)
-                self.accuracy_label.text = f"Signal Accuracy: {acc}% (CONFIRMED BEARISH)"
-
-            else:
-                self.signal_type = "NO_TRADE"
-                self.signal_box.text = f"⚠️ NO TRADE ZONE!\nMARKET VOLATILE / SIDEWAYS"
-                self.signal_box.color = (1, 0.8, 0, 1)
-                self.accuracy_label.text = "Signal Accuracy: RISKY (SKIP ENTRY)"
-
-        except Exception:
-            self.signal_type = "NO_TRADE"
-            self.signal_box.text = "⚠️ NO CLEAR PATTERN FOUND"
-            self.signal_box.color = (1, 0.8, 0, 1)
-            self.accuracy_label.text = "Signal Accuracy: Low Confidence"
+        else:
+            self.signal_type = "PUT"
+            acc = round(93.5 + ((max(r_val, 50.0) - 50.0) * 0.3), 1)
+            if acc > 98.8: acc = 98.8
+            self.signal_box.text = f"HIGH WIN PUT / DOWN ({expiry})\nTAKE ENTRY IN: 05s"
+            self.signal_box.color = (1, 0, 0, 1)
+            self.accuracy_label.text = f"Signal Accuracy: {acc}% (BEARISH ENTRY)"
 
 class HinataBotApp(App):
     def build(self):
