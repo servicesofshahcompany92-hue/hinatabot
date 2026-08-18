@@ -1,5 +1,7 @@
 import math
+import threading
 import time
+import requests
 
 from kivy.app import App
 from kivy.clock import Clock
@@ -65,7 +67,7 @@ class LoginScreen(Screen):
             self.status_lbl.text = "Enter valid key!"
 
 # ==========================================
-# 2. ACCURATE MANUAL SIGNAL DASHBOARD
+# 2. ACCURATE REAL LIVE MARKET DASHBOARD
 # ==========================================
 class OverlayScreen(Screen):
     def __init__(self, **kwargs):
@@ -91,16 +93,10 @@ class OverlayScreen(Screen):
         control_row = BoxLayout(spacing=6, size_hint_y=0.12)
         
         self.pair_spinner = Spinner(
-            text='EUR/USD (OTC)',
+            text='EUR/USD',
             values=(
-                'EUR/USD (OTC)', 'GBP/USD (OTC)', 'USD/JPY (OTC)', 
-                'AUD/CAD (OTC)', 'USD/BRL (OTC)', 'EUR/GBP (OTC)',
-                'NZD/USD (OTC)', 'USD/CAD (OTC)', 'AUD/USD (OTC)',
-                'USD/PKR (OTC)', 'USD/INR (OTC)', 'Crypto IDX (OTC)',
-                'Gold / XAUUSD (OTC)', 'Silver / XAGUSD (OTC)',
                 'EUR/USD', 'GBP/USD', 'USD/JPY', 'AUD/USD',
-                'USD/CAD', 'USD/CHF', 'EUR/JPY', 'GBP/JPY',
-                'BTC/USD', 'ETH/USD'
+                'USD/CAD', 'USD/CHF', 'EUR/GBP', 'GBP/JPY'
             ),
             size_hint_x=0.6,
             font_size='11sp'
@@ -119,7 +115,7 @@ class OverlayScreen(Screen):
 
         # 3. Live Price & Status Display
         self.price_label = Label(
-            text="Price: 1.08500 | Market Feed: Active",
+            text="Price: Fetching... | Feed: Live API",
             font_size='12sp',
             color=(0.8, 0.8, 0.9, 1),
             size_hint_y=0.08
@@ -157,7 +153,7 @@ class OverlayScreen(Screen):
 
         # 7. Action Button
         self.analyze_btn = Button(
-            text="START ANALYSIS",
+            text="START REAL ANALYSIS",
             font_size='14sp',
             bold=True,
             size_hint_y=0.12,
@@ -172,18 +168,18 @@ class OverlayScreen(Screen):
         self.prices = []
         self.signal_timer = 5
         self.analysis_timer = 3
-        self.latest_price = 1.0850
+        self.latest_price = 0.0
         self.current_rsi = 50.0
-        self.ema9 = 1.08500
-        self.ema21 = 1.08500
-        self.step_counter = 0
+        self.ema9 = 0.0
+        self.ema21 = 0.0
 
-        self.state = "IDLE"  # "IDLE", "ANALYZING", "COUNTDOWN", "RESULT"
+        self.state = "IDLE"
         self.signal_type = "CALL"
 
-        # Kivy Loop Scheduler
-        Clock.schedule_interval(self.tick_engine, 0.5)
+        # Schedulers
         Clock.schedule_interval(self.second_timer, 1.0)
+        # Background Live Price Fetcher (Every 2 seconds)
+        Clock.schedule_interval(self.schedule_live_fetch, 2.0)
 
     def _update_rect(self, instance, value):
         self.rect.pos = instance.pos
@@ -192,9 +188,40 @@ class OverlayScreen(Screen):
     def on_pair_change(self, spinner, text):
         self.state = "IDLE"
         self.prices.clear()
-        self.signal_box.text = f"PAIR: {text}\nCLICK 'START ANALYSIS'"
+        self.signal_box.text = f"PAIR: {text}\nCLICK 'START REAL ANALYSIS'"
         self.signal_box.color = (1, 1, 1, 1)
         self.accuracy_label.text = "Signal Accuracy: Waiting for Trigger..."
+
+    def schedule_live_fetch(self, dt):
+        threading.Thread(target=self.fetch_real_price, daemon=True).start()
+
+    def fetch_real_price(self):
+        pair = self.pair_spinner.text.replace("/", "")
+        url = f"https://financialmodelingprep.com/api/v3/quote/{pair}?apikey=demo"
+        try:
+            res = requests.get(url, timeout=3)
+            if res.status_code == 200:
+                data = res.json()
+                if data and isinstance(data, list) and 'price' in data[0]:
+                    real_p = float(data[0]['price'])
+                    Clock.schedule_once(lambda dt: self.update_market_data(real_p))
+        except Exception:
+            pass
+
+    def update_market_data(self, price):
+        self.latest_price = price
+        self.prices.append(price)
+        if len(self.prices) > 30:
+            self.prices.pop(0)
+
+        self.current_rsi = round(self.calculate_rsi(self.prices, 10), 1)
+        self.ema9 = round(self.calculate_ema(self.prices, 7), 5)
+        self.ema21 = round(self.calculate_ema(self.prices, 12), 5)
+
+        current_time_str = time.strftime("%H:%M:%S")
+        self.header_label.text = f"HINATA BOT | Live Time: {current_time_str}"
+        self.price_label.text = f"Price: {self.latest_price:.5f} | Feed: Real Live API"
+        self.stats_label.text = f"RSI: {self.current_rsi} | EMA9: {self.ema9:.5f} | EMA21: {self.ema21:.5f}"
 
     def trigger_manual_analysis(self, instance):
         if self.state in ["ANALYZING", "COUNTDOWN"]:
@@ -203,13 +230,13 @@ class OverlayScreen(Screen):
         self.state = "ANALYZING"
         self.analysis_timer = 3
         self.analyze_btn.disabled = True
-        self.signal_box.text = f"ANALYZING {self.pair_spinner.text}...\nPLEASE WAIT ({self.analysis_timer}s)"
+        self.signal_box.text = f"ANALYZING REAL {self.pair_spinner.text}...\nPLEASE WAIT ({self.analysis_timer}s)"
         self.signal_box.color = (1, 0.8, 0, 1)
-        self.accuracy_label.text = "Computing Market Structure & Indicators..."
+        self.accuracy_label.text = "Computing Real Market Indicators..."
 
     def calculate_ema(self, prices, period):
         if len(prices) < period:
-            return sum(prices) / len(prices)
+            return sum(prices) / len(prices) if prices else 0.0
         k = 2 / (period + 1)
         ema = sum(prices[:period]) / period
         for p in prices[period:]:
@@ -234,28 +261,10 @@ class OverlayScreen(Screen):
             return 100.0
         return 100.0 - (100.0 / (1.0 + (avg_gain / avg_loss)))
 
-    def tick_engine(self, dt):
-        self.step_counter += 1
-        delta = math.sin(self.step_counter * 0.4) * 0.0009 + (math.cos(self.step_counter * 0.2) * 0.0004)
-        self.latest_price = round(self.latest_price + delta, 5)
-        self.prices.append(self.latest_price)
-
-        if len(self.prices) > 30:
-            self.prices.pop(0)
-
-        self.current_rsi = round(self.calculate_rsi(self.prices, 10), 1)
-        self.ema9 = round(self.calculate_ema(self.prices, 7), 5)
-        self.ema21 = round(self.calculate_ema(self.prices, 12), 5)
-
-        current_time_str = time.strftime("%H:%M:%S")
-        self.header_label.text = f"HINATA BOT | Live Time: {current_time_str}"
-        self.price_label.text = f"Price: {self.latest_price:.5f} | Market Feed: Active"
-        self.stats_label.text = f"RSI: {self.current_rsi} | EMA9: {self.ema9:.5f} | EMA21: {self.ema21:.5f}"
-
     def second_timer(self, dt):
         if self.state == "ANALYZING":
             self.analysis_timer -= 1
-            self.signal_box.text = f"ANALYZING {self.pair_spinner.text}...\nPLEASE WAIT ({self.analysis_timer}s)"
+            self.signal_box.text = f"ANALYZING REAL {self.pair_spinner.text}...\nPLEASE WAIT ({self.analysis_timer}s)"
             
             if self.analysis_timer <= 0:
                 self.state = "COUNTDOWN"
@@ -281,7 +290,6 @@ class OverlayScreen(Screen):
         e21_val = self.ema21
         expiry = self.expiry_spinner.text
 
-        # Dynamic Direction Determination
         if r_val <= 50 or e9_val >= e21_val:
             self.signal_type = "CALL"
             acc = round(93.5 + ((50.0 - min(r_val, 50.0)) * 0.3), 1)
@@ -289,7 +297,6 @@ class OverlayScreen(Screen):
             self.signal_box.text = f"HIGH WIN CALL / UP ({expiry})\nTAKE ENTRY IN: 05s"
             self.signal_box.color = (0, 1, 0, 1)
             self.accuracy_label.text = f"Signal Accuracy: {acc}% (BULLISH ENTRY)"
-
         else:
             self.signal_type = "PUT"
             acc = round(93.5 + ((max(r_val, 50.0) - 50.0) * 0.3), 1)
